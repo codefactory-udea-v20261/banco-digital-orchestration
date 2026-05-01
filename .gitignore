@@ -1,0 +1,31 @@
+# IDE
+../.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build
+target/
+*.jar
+*.class
+*.log
+
+# Dependencies
+.m2/
+node_modules/
+
+# Environment
+.env.local
+.env.*.local
+
+# Docker
+.docker/
+docker-compose.local.yml
+
+# Temp files
+*.tmp
+*.bak
+session-*.md
+compile.md

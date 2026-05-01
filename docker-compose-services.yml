@@ -1,0 +1,189 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: banco-digital-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    networks:
+      - banco-digital-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: banco-digital-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+    networks:
+      - banco-digital-network
+    healthcheck:
+      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: banco-digital-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    ports:
+      - "9092:9092"
+    networks:
+      - banco-digital-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-servers", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  eureka-server:
+    build:
+      context: eureka-server
+      dockerfile: eureka-server/Dockerfile
+    container_name: banco-digital-eureka
+    ports:
+      - "8761:8761"
+    environment:
+      APP_PROFILE: docker
+    networks:
+      - banco-digital-network
+
+  api-gateway:
+    build:
+      context: banco-digital-gateway
+      dockerfile: banco-digital-gateway/Dockerfile
+    container_name: banco-digital-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      APP_PROFILE: docker
+      APP_PORT: 8000
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      eureka-server:
+        condition: service_started
+    networks:
+      - banco-digital-network
+
+  identity:
+    build:
+      context: banco-digital-identity
+      dockerfile: banco-digital-identity/Dockerfile
+    container_name: banco-digital-identity
+    ports:
+      - "8081:8081"
+    environment:
+      APP_PROFILE: docker
+      APP_PORT: 8081
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: banco_digital_identity
+      DB_USERNAME: postgres
+      DB_PASSWORD: admin
+      EUREKA_URL: http://eureka-server:8761/eureka/
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - banco-digital-network
+
+  core-banking:
+    build:
+      context: banco-digital
+      dockerfile: banco-digital/Dockerfile
+    container_name: banco-digital-core-banking
+    ports:
+      - "8080:8080"
+    environment:
+      APP_PROFILE: docker
+      APP_PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: banco_digital_core
+      DB_USERNAME: postgres
+      DB_PASSWORD: admin
+      EUREKA_URL: http://eureka-server:8761/eureka/
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      IDENTITY_SERVICE_URL: http://identity:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - banco-digital-network
+
+  audit:
+    build:
+      context: banco-digital-audit
+      dockerfile: banco-digital-audit/Dockerfile
+    container_name: banco-digital-audit
+    ports:
+      - "8082:8082"
+    environment:
+      APP_PROFILE: docker
+      APP_PORT: 8082
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: banco_digital_audit
+      DB_USERNAME: postgres
+      DB_PASSWORD: admin
+      EUREKA_URL: http://eureka-server:8761/eureka/
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - banco-digital-network
+
+  reporting:
+    build:
+      context: banco-digital-reporting
+      dockerfile: banco-digital-reporting/Dockerfile
+    container_name: banco-digital-reporting
+    ports:
+      - "8083:8083"
+    environment:
+      APP_PROFILE: docker
+      APP_PORT: 8083
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: banco_digital_reporting
+      DB_USERNAME: postgres
+      DB_PASSWORD: admin
+      EUREKA_URL: http://eureka-server:8761/eureka/
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - banco-digital-network
+
+volumes:
+  postgres_data:
+
+networks:
+  banco-digital-network:
+    driver: bridge
