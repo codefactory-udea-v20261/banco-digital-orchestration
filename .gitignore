@@ -29,3 +29,11 @@ docker-compose.local.yml
 *.bak
 session-*.md
 compile.md
+
+# projects
+banco-digital/
+banco-digital-audit/
+banco-digital-gateway/
+banco-digital-identity/
+banco-digital-reporting/
+eureka-server/
