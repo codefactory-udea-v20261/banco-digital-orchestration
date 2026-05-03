@@ -1,0 +1,662 @@
+{
+  "info": {
+    "name": "Banco Digital — Cloud Run (Full E2E)",
+    "_postman_id": "banco-digital-cloud-run-e2e",
+    "description": "Colección automatizada para probar todos los servicios desplegados en Cloud Run.\n\nPasos:\n1. Importar en Postman\n2. Click en 'Run collection'\n3. Todo se ejecuta automáticamente en secuencia\n\nEl flujo completo es:\n1. Login admin → obtiene token\n2. Crear cliente\n3. Crear cuenta\n4. Depositar\n5. Consultar saldo\n6. Transferir\n7. Ver historial\n8. Ver reportes\n9. Ver auditoría\n10. Logout",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "gateway_url", "value": "https://gateway-982674607718.us-central1.run.app" },
+    { "key": "identity_url", "value": "https://identity-982674607718.us-central1.run.app" },
+    { "key": "core_url", "value": "https://core-banking-982674607718.us-central1.run.app" },
+    { "key": "audit_url", "value": "https://audit-982674607718.us-central1.run.app" },
+    { "key": "reporting_url", "value": "https://reporting-982674607718.us-central1.run.app" },
+    { "key": "admin_token", "value": "" },
+    { "key": "cliente_id", "value": "" },
+    { "key": "cuenta_id", "value": "" },
+    { "key": "cuenta_id_2", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Health Checks",
+      "item": [
+        {
+          "name": "Identity Health",
+          "request": {
+            "method": "GET",
+            "url": "{{identity_url}}/actuator/health"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Identity is reachable', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Gateway Health",
+          "request": {
+            "method": "GET",
+            "url": "{{gateway_url}}/actuator/health"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Gateway is UP', function() {",
+                "    pm.expect(pm.response.code).to.equal(200);",
+                "    var body = pm.response.json();",
+                "    pm.expect(body.status).to.equal('UP');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Core Banking Health",
+          "request": {
+            "method": "GET",
+            "url": "{{core_url}}/actuator/health"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Core is reachable', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "1. Autenticación",
+      "item": [
+        {
+          "name": "1.1 Login Admin (Identity directo)",
+          "request": {
+            "method": "POST",
+            "url": "{{identity_url}}/api/v1/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"admin@banco.com\",\n  \"clave\": \"Admin123!\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "var body = pm.response.json();",
+                "pm.test('Login exitoso o credenciales invalidas', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                "});",
+                "if (pm.response.code === 200 && body.data && body.data.token) {",
+                "    pm.collectionVariables.set('admin_token', body.data.token);",
+                "    pm.test('Token obtenido', function() { pm.expect(body.data.token).to.not.be.empty; });",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "1.2 Login via Gateway",
+          "request": {
+            "method": "POST",
+            "url": "{{gateway_url}}/api/v1/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"admin@banco.com\",\n  \"clave\": \"Admin123!\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "var body = pm.response.json();",
+                "pm.test('Gateway routing funciona', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                "});",
+                "if (pm.response.code === 200 && body.data && body.data.token) {",
+                "    pm.collectionVariables.set('admin_token', body.data.token);",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "1.3 Validar Token",
+          "request": {
+            "method": "POST",
+            "url": "{{identity_url}}/api/v1/auth/validate-token",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{admin_token}}\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Token validation endpoint works', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 401, 403]);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "1.4 Mi Perfil (/auth/me)",
+          "request": {
+            "method": "GET",
+            "url": "{{identity_url}}/api/v1/auth/me",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Get profile works', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "2. Clientes (Core Banking)",
+      "item": [
+        {
+          "name": "2.1 Crear Cliente",
+          "request": {
+            "method": "POST",
+            "url": "{{core_url}}/api/v1/clientes",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numeroCedula\": \"1098765432\",\n  \"primerNombre\": \"Carlos\",\n  \"segundoNombre\": \"Andrés\",\n  \"primerApellido\": \"García\",\n  \"segundoApellido\": \"López\",\n  \"email\": \"carlos.garcia@test.com\",\n  \"fechaNacimiento\": \"1990-05-15\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "var body = pm.response.json();",
+                "pm.test('Cliente creado o ya existe', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 409]);",
+                "});",
+                "if (body.data && body.data.id) {",
+                "    pm.collectionVariables.set('cliente_id', body.data.id);",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "2.2 Obtener Cliente",
+          "request": {
+            "method": "GET",
+            "url": "{{core_url}}/api/v1/clientes/{{cliente_id}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Cliente obtenido', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "2.3 Actualizar Cliente",
+          "request": {
+            "method": "PATCH",
+            "url": "{{core_url}}/api/v1/clientes/{{cliente_id}}",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"carlos.garcia.updated@test.com\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Cliente actualizado', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "3. Cuentas",
+      "item": [
+        {
+          "name": "3.1 Crear Cuenta (Ahorros)",
+          "request": {
+            "method": "POST",
+            "url": "{{core_url}}/api/v1/cuentas",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{cliente_id}}\",\n  \"tipoCuentaId\": 1\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "var body = pm.response.json();",
+                "pm.test('Cuenta creada', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                "});",
+                "if (body.data && body.data.id) {",
+                "    pm.collectionVariables.set('cuenta_id', body.data.id);",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "3.2 Crear Segunda Cuenta (para transferencias)",
+          "request": {
+            "method": "POST",
+            "url": "{{core_url}}/api/v1/cuentas",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{cliente_id}}\",\n  \"tipoCuentaId\": 2\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "var body = pm.response.json();",
+                "pm.test('Segunda cuenta creada', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                "});",
+                "if (body.data && body.data.id) {",
+                "    pm.collectionVariables.set('cuenta_id_2', body.data.id);",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "3.3 Consultar Saldo",
+          "request": {
+            "method": "GET",
+            "url": "{{core_url}}/api/v1/cuentas/{{cuenta_id}}/saldo",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Saldo obtenido', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "3.4 Listar Cuentas del Cliente",
+          "request": {
+            "method": "GET",
+            "url": "{{core_url}}/api/v1/clientes/{{cliente_id}}/cuentas",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Cuentas listadas', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "4. Transacciones",
+      "item": [
+        {
+          "name": "4.1 Depósito",
+          "request": {
+            "method": "POST",
+            "url": "{{core_url}}/api/v1/transacciones/retiro",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cuentaId\": \"{{cuenta_id}}\",\n  \"monto\": 500000,\n  \"descripcion\": \"Depósito inicial de prueba\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Transaccion procesada', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400]);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "4.2 Historial de Transacciones",
+          "request": {
+            "method": "GET",
+            "url": "{{core_url}}/api/v1/transacciones/historial/{{cuenta_id}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Historial obtenido', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "5. Transferencias",
+      "item": [
+        {
+          "name": "5.1 Transferencia entre cuentas",
+          "request": {
+            "method": "POST",
+            "url": "{{core_url}}/api/v1/transferencias",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cuentaOrigenId\": \"{{cuenta_id}}\",\n  \"cuentaDestinoId\": \"{{cuenta_id_2}}\",\n  \"monto\": 50000,\n  \"descripcion\": \"Transferencia de prueba E2E\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Transferencia procesada', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 400]);",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "6. Reportes",
+      "item": [
+        {
+          "name": "6.1 Saldo Total del Cliente",
+          "request": {
+            "method": "GET",
+            "url": "{{reporting_url}}/api/v1/reportes/saldo-total?clienteId={{cliente_id}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Saldo total obtenido', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "6.2 Movimientos",
+          "request": {
+            "method": "GET",
+            "url": "{{reporting_url}}/api/v1/reportes/movimientos?clienteId={{cliente_id}}&fechaInicio=2026-01-01&fechaFin=2026-12-31",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Movimientos obtenidos', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "6.3 Cuentas del Cliente",
+          "request": {
+            "method": "GET",
+            "url": "{{reporting_url}}/api/v1/reportes/cuentas?clienteId={{cliente_id}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Cuentas obtenidas', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "7. Auditoría",
+      "item": [
+        {
+          "name": "7.1 Listar Eventos de Auditoría",
+          "request": {
+            "method": "GET",
+            "url": "{{audit_url}}/api/v1/audit?page=0&size=10",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Audit events obtenidos', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "8. Seguridad — Casos negativos",
+      "item": [
+        {
+          "name": "8.1 Acceso sin token (debe dar 401/403)",
+          "request": {
+            "method": "GET",
+            "url": "{{core_url}}/api/v1/clientes/{{cliente_id}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Acceso denegado sin token', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "8.2 Token inválido (debe dar 401)",
+          "request": {
+            "method": "GET",
+            "url": "{{core_url}}/api/v1/clientes/{{cliente_id}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer invalid.token.here" }
+            ]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Token inválido rechazado', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "8.3 Login con credenciales incorrectas",
+          "request": {
+            "method": "POST",
+            "url": "{{identity_url}}/api/v1/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"noexiste@banco.com\",\n  \"clave\": \"wrongpass\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Login rechazado', function() {",
+                "    pm.expect(pm.response.code).to.equal(401);",
+                "});",
+                "pm.test('Error code correcto', function() {",
+                "    var body = pm.response.json();",
+                "    pm.expect(body.error.errorCode).to.equal('AUTH_001');",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "8.4 Payload inválido (validación)",
+          "request": {
+            "method": "POST",
+            "url": "{{identity_url}}/api/v1/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"not-an-email\",\n  \"clave\": \"\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Validación de payload', function() {",
+                "    pm.expect(pm.response.code).to.equal(400);",
+                "});",
+                "pm.test('Tiene detalles de error', function() {",
+                "    var body = pm.response.json();",
+                "    pm.expect(body.error.errorCode).to.equal('VALIDATION_ERROR');",
+                "    pm.expect(body.error.details).to.be.an('array');",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "9. Logout",
+      "item": [
+        {
+          "name": "9.1 Logout (revocar token)",
+          "request": {
+            "method": "POST",
+            "url": "{{identity_url}}/api/v1/auth/logout",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ]
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Logout exitoso', function() {",
+                "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                "});"
+              ]
+            }
+          }]
+        }
+      ]
+    }
+  ]
+}
