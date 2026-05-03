@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -45,16 +43,20 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://0.0.0.0:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
     ports:
       - "9092:9092"
+      - "29092:29092"
     networks:
       - banco-digital-network
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-servers", "localhost:9092"]
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-servers", "kafka:9092"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -62,7 +64,7 @@ services:
   eureka-server:
     build:
       context: eureka-server
-      dockerfile: eureka-server/Dockerfile
+      dockerfile: Dockerfile
     container_name: banco-digital-eureka
     ports:
       - "8761:8761"
@@ -74,7 +76,7 @@ services:
   api-gateway:
     build:
       context: banco-digital-gateway
-      dockerfile: banco-digital-gateway/Dockerfile
+      dockerfile: Dockerfile
     container_name: banco-digital-api-gateway
     ports:
       - "8000:8000"
@@ -82,6 +84,10 @@ services:
       APP_PROFILE: docker
       APP_PORT: 8000
       EUREKA_URL: http://eureka-server:8761/eureka/
+      SPRING_ZIPKIN_ENABLED: 'false'
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
     depends_on:
       eureka-server:
         condition: service_started
@@ -91,7 +97,7 @@ services:
   identity:
     build:
       context: banco-digital-identity
-      dockerfile: banco-digital-identity/Dockerfile
+      dockerfile: Dockerfile
     container_name: banco-digital-identity
     ports:
       - "8081:8081"
@@ -105,6 +111,11 @@ services:
       DB_PASSWORD: admin
       EUREKA_URL: http://eureka-server:8761/eureka/
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: kafka:9092
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
+      SPRING_ZIPKIN_ENABLED: 'false'
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -114,7 +125,7 @@ services:
   core-banking:
     build:
       context: banco-digital
-      dockerfile: banco-digital/Dockerfile
+      dockerfile: Dockerfile
     container_name: banco-digital-core-banking
     ports:
       - "8080:8080"
@@ -128,6 +139,11 @@ services:
       DB_PASSWORD: admin
       EUREKA_URL: http://eureka-server:8761/eureka/
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: kafka:9092
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
+      SPRING_ZIPKIN_ENABLED: 'false'
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       IDENTITY_SERVICE_URL: http://identity:8081
     depends_on:
       postgres:
@@ -138,7 +154,7 @@ services:
   audit:
     build:
       context: banco-digital-audit
-      dockerfile: banco-digital-audit/Dockerfile
+      dockerfile: Dockerfile
     container_name: banco-digital-audit
     ports:
       - "8082:8082"
@@ -152,6 +168,11 @@ services:
       DB_PASSWORD: admin
       EUREKA_URL: http://eureka-server:8761/eureka/
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: kafka:9092
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
+      SPRING_ZIPKIN_ENABLED: 'false'
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -161,7 +182,7 @@ services:
   reporting:
     build:
       context: banco-digital-reporting
-      dockerfile: banco-digital-reporting/Dockerfile
+      dockerfile: Dockerfile
     container_name: banco-digital-reporting
     ports:
       - "8083:8083"
@@ -175,11 +196,29 @@ services:
       DB_PASSWORD: admin
       EUREKA_URL: http://eureka-server:8761/eureka/
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: kafka:9092
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
+      SPRING_ZIPKIN_ENABLED: 'false'
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - banco-digital-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: banco-digital-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - banco-digital-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

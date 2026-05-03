@@ -1,0 +1,58 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "ollama/qwen2.5-coder:7b",
+  "mcp": {
+    "filesystem": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/nia/projects/udea/arquisoft/banco-digital-fabela"
+      ]
+    },
+    "fetch": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "mcp-server-fetch"
+      ]
+    },
+    "memory": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "postgres": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:admin@localhost:5432/banco_digital"
+      ]
+    },
+    "docker": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "docker-mcp"
+      ]
+    },
+    "shell": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@mkusaka/mcp-shell-server"
+      ]
+    },
+    "search": {
+      "type": "remote",
+      "url": "https://mcp.exa.ai/mcp"
+    }
+  }
+}

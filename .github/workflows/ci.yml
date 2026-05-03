@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
@@ -49,6 +51,8 @@ jobs:
     needs: validate
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
@@ -75,6 +79,8 @@ jobs:
     needs: unit-tests
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
@@ -105,6 +111,8 @@ jobs:
         options: --privileged
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
@@ -130,6 +138,8 @@ jobs:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
