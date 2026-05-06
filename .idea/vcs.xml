@@ -7,6 +7,5 @@
     <mapping directory="$PROJECT_DIR$/banco-digital-gateway" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/banco-digital-identity" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/banco-digital-reporting" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/eureka-server" vcs="Git" />
   </component>
 </project>
