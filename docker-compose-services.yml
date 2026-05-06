@@ -61,18 +61,6 @@ services:
       timeout: 5s
       retries: 5
 
-  eureka-server:
-    build:
-      context: eureka-server
-      dockerfile: Dockerfile
-    container_name: banco-digital-eureka
-    ports:
-      - "8761:8761"
-    environment:
-      APP_PROFILE: docker
-    networks:
-      - banco-digital-network
-
   api-gateway:
     build:
       context: banco-digital-gateway
@@ -83,14 +71,10 @@ services:
     environment:
       APP_PROFILE: docker
       APP_PORT: 8000
-      EUREKA_URL: http://eureka-server:8761/eureka/
       SPRING_ZIPKIN_ENABLED: 'false'
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-    depends_on:
-      eureka-server:
-        condition: service_started
     networks:
       - banco-digital-network
 
@@ -109,7 +93,7 @@ services:
       DB_NAME: banco_digital_identity
       DB_USERNAME: postgres
       DB_PASSWORD: admin
-      EUREKA_URL: http://eureka-server:8761/eureka/
+
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: kafka:9092
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
@@ -137,7 +121,7 @@ services:
       DB_NAME: banco_digital_core
       DB_USERNAME: postgres
       DB_PASSWORD: admin
-      EUREKA_URL: http://eureka-server:8761/eureka/
+
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: kafka:9092
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
@@ -166,7 +150,7 @@ services:
       DB_NAME: banco_digital_audit
       DB_USERNAME: postgres
       DB_PASSWORD: admin
-      EUREKA_URL: http://eureka-server:8761/eureka/
+
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: kafka:9092
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
@@ -194,7 +178,7 @@ services:
       DB_NAME: banco_digital_reporting
       DB_USERNAME: postgres
       DB_PASSWORD: admin
-      EUREKA_URL: http://eureka-server:8761/eureka/
+
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: kafka:9092
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
