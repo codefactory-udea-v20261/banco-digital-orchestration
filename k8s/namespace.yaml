@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: banco-digital
+  labels:
+    name: banco-digital
+    project: banco-digital

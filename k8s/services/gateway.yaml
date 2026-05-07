@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: banco-digital
+  labels:
+    app: gateway
+spec:
+  # LoadBalancer is the only public ingress point.
+  # If using GKE Ingress (k8s/ingress.yaml) instead, switch this to ClusterIP.
+  type: LoadBalancer
+  selector:
+    app: gateway
+  ports:
+    - port: 80
+      targetPort: 8000
+      name: http

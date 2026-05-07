@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: banco-digital
+data:
+  # Mounted at /docker-entrypoint-initdb.d/00-init.sh on the postgres
+  # container. The official postgres image runs every executable .sh in this
+  # directory in alphabetical order on first boot (when PGDATA is empty).
+  #
+  # The script reads the four per-service passwords from env vars set on
+  # the postgres container by the db-credentials Secret. Plaintext passwords
+  # never appear in this file or in the rendered ConfigMap.
+  00-init.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    : "${CORE_DB_PASSWORD:?CORE_DB_PASSWORD must be set on the postgres container}"
+    : "${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD must be set on the postgres container}"
+    : "${AUDIT_DB_PASSWORD:?AUDIT_DB_PASSWORD must be set on the postgres container}"
+    : "${REPORTING_DB_PASSWORD:?REPORTING_DB_PASSWORD must be set on the postgres container}"
+
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
+        CREATE USER core_user      WITH PASSWORD '${CORE_DB_PASSWORD}';
+        CREATE USER identity_user  WITH PASSWORD '${IDENTITY_DB_PASSWORD}';
+        CREATE USER audit_user     WITH PASSWORD '${AUDIT_DB_PASSWORD}';
+        CREATE USER reporting_user WITH PASSWORD '${REPORTING_DB_PASSWORD}';
+
+        CREATE DATABASE banco_digital_core      OWNER core_user;
+        CREATE DATABASE banco_digital_identity  OWNER identity_user;
+        CREATE DATABASE banco_digital_audit     OWNER audit_user;
+        CREATE DATABASE banco_digital_reporting OWNER reporting_user;
+
+        REVOKE ALL ON DATABASE banco_digital_core      FROM PUBLIC;
+        REVOKE ALL ON DATABASE banco_digital_identity  FROM PUBLIC;
+        REVOKE ALL ON DATABASE banco_digital_audit     FROM PUBLIC;
+        REVOKE ALL ON DATABASE banco_digital_reporting FROM PUBLIC;
+
+        GRANT ALL PRIVILEGES ON DATABASE banco_digital_core      TO core_user;
+        GRANT ALL PRIVILEGES ON DATABASE banco_digital_identity  TO identity_user;
+        GRANT ALL PRIVILEGES ON DATABASE banco_digital_audit     TO audit_user;
+        GRANT ALL PRIVILEGES ON DATABASE banco_digital_reporting TO reporting_user;
+    EOSQL
+
+    # Postgres 15+ locks down the public schema. Re-grant per database so
+    # Flyway can create its own tables on first run with the service user.
+    for pair in \
+        "banco_digital_core core_user" \
+        "banco_digital_identity identity_user" \
+        "banco_digital_audit audit_user" \
+        "banco_digital_reporting reporting_user"; do
+        db="${pair% *}"
+        role="${pair#* }"
+        psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$db" <<-EOSQL
+            GRANT ALL ON SCHEMA public TO ${role};
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES   TO ${role};
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO ${role};
+        EOSQL
+    done

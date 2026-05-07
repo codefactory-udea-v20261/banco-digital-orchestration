@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: reporting
+  namespace: banco-digital
+  labels:
+    app: reporting
+spec:
+  type: ClusterIP
+  selector:
+    app: reporting
+  ports:
+    - port: 8083
+      targetPort: 8083
+      name: http

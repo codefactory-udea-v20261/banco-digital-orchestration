@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: identity-config
+  namespace: banco-digital
+data:
+  APP_PROFILE: "docker"
+  APP_PORT: "8081"
+  DB_NAME: "banco_digital_identity"

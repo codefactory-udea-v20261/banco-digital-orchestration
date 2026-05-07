@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: core
+  namespace: banco-digital
+  labels:
+    app: core
+spec:
+  type: ClusterIP
+  selector:
+    app: core
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http

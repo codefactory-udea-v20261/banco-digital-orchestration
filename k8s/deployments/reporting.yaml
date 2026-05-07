@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting
+  namespace: banco-digital
+  labels:
+    app: reporting
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reporting
+  template:
+    metadata:
+      labels:
+        app: reporting
+    spec:
+      serviceAccountName: reporting
+      containers:
+        - name: reporting
+          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/reporting:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+              name: http
+          envFrom:
+            - configMapRef:
+                name: shared-config
+            - configMapRef:
+                name: reporting-config
+          env:
+            - name: DB_USERNAME
+              value: "reporting_user"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: REPORTING_DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8083
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "300m"
+              memory: "384Mi"
+            limits:
+              cpu: "750m"
+              memory: "768Mi"

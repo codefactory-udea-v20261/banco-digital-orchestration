@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-banking-config
+  namespace: banco-digital
+data:
+  APP_PROFILE: "docker"
+  APP_PORT: "8080"
+  DB_NAME: "banco_digital_core"
+  # Outbox events Kafka topic — see banco-digital/shared/event/OutboxProcessor.java
+  EVENTS_TOPIC: "banco-digital-events"
+  EVENTS_DLQ_TOPIC: "banco-digital-events-dlq"
+  # Pending-access-provisioning queue used when Identity is unreachable.
+  ACCESS_PROVISIONING_PENDING_TOPIC: "cliente-access-provisioning-pending"
+  ACCESS_PROVISIONING_DLQ_TOPIC: "cliente-access-provisioning-dlq"

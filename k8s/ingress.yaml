@@ -1,0 +1,30 @@
+# GKE Ingress routes external traffic to the gateway, which in turn handles
+# routing, JWT validation and rate limiting for the internal services.
+#
+# Note: when using this Ingress in production, change services/gateway.yaml
+# from LoadBalancer to ClusterIP — Ingress + LoadBalancer is wasteful (two
+# external IPs). The LoadBalancer in services/gateway.yaml is kept for
+# minimum-viable deploys without an Ingress.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: banco-digital-ingress
+  namespace: banco-digital
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+spec:
+  defaultBackend:
+    service:
+      name: gateway
+      port:
+        number: 80
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 80

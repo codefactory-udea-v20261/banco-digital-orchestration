@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit
+  namespace: banco-digital
+  labels:
+    app: audit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: audit
+  template:
+    metadata:
+      labels:
+        app: audit
+    spec:
+      serviceAccountName: audit
+      containers:
+        - name: audit
+          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/audit:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+              name: http
+          envFrom:
+            - configMapRef:
+                name: shared-config
+            - configMapRef:
+                name: audit-config
+          env:
+            - name: DB_USERNAME
+              value: "audit_user"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: AUDIT_DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "300m"
+              memory: "384Mi"
+            limits:
+              cpu: "750m"
+              memory: "768Mi"
