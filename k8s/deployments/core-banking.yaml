@@ -19,7 +19,7 @@ spec:
       containers:
         - name: core
           # CI replaces :latest with $GITHUB_SHA before kubectl apply.
-          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/core-banking:latest
+          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/banco-digital-core:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

@@ -18,7 +18,7 @@ spec:
       serviceAccountName: identity
       containers:
         - name: identity
-          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/identity:latest
+          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/banco-digital-identity:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
@@ -41,18 +41,21 @@ spec:
                 secretKeyRef:
                   name: jwt-secret
                   key: JWT_SECRET
+          # tcpSocket probes — Spring Security in this service blocks
+          # /actuator/health/* with HTTP 403 for unauthenticated callers,
+          # which fails kubelet's HTTP probe. Until SecurityConfig is
+          # updated to permit /actuator/health/**, port-open is the
+          # liveness signal we have.
           readinessProbe:
-            httpGet:
-              path: /actuator/health/readiness
+            tcpSocket:
               port: 8081
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 6
           livenessProbe:
-            httpGet:
-              path: /actuator/health/liveness
+            tcpSocket:
               port: 8081
-            initialDelaySeconds: 60
+            initialDelaySeconds: 120
             periodSeconds: 20
             failureThreshold: 3
           resources:

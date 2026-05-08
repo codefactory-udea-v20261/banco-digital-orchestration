@@ -30,6 +30,12 @@ spec:
       labels:
         app: kafka
     spec:
+      securityContext:
+        # Chown the PVC mount to gid 1000 so Kafka (uid 1000 = appuser
+        # in confluentinc/cp-kafka) can write to /var/lib/kafka/data.
+        # Without this, the pod's preflight check `dub path ... writable`
+        # fails and the container exits in CrashLoopBackOff.
+        fsGroup: 1000
       containers:
         - name: kafka
           image: confluentinc/cp-kafka:7.5.0
@@ -57,6 +63,12 @@ spec:
               value: "1"
             - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
               value: "1"
+            # Mount root /var/lib/kafka/data contains an ext4 `lost+found`
+            # dir on every fresh PVC. Kafka scans the log dir for
+            # topic-partition directory names and crashes on `lost+found`.
+            # Pinning Kafka's log dir to a subdirectory hides that.
+            - name: KAFKA_LOG_DIRS
+              value: "/var/lib/kafka/data/topics"
           volumeMounts:
             - name: kafka-data
               mountPath: /var/lib/kafka/data

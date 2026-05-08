@@ -21,6 +21,15 @@ data:
     : "${REPORTING_DB_PASSWORD:?REPORTING_DB_PASSWORD must be set on the postgres container}"
 
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
+        -- Shared roles. Each service's Flyway V1 migration does
+        -- CREATE ROLE app_readonly / app_user (idempotent IF NOT EXISTS),
+        -- but the per-service users lack CREATEROLE — so the roles must
+        -- exist before the first migration runs. Created here as the
+        -- superuser so per-service migrations short-circuit on the
+        -- IF NOT EXISTS check.
+        CREATE ROLE app_readonly;
+        CREATE ROLE app_user;
+
         CREATE USER core_user      WITH PASSWORD '${CORE_DB_PASSWORD}';
         CREATE USER identity_user  WITH PASSWORD '${IDENTITY_DB_PASSWORD}';
         CREATE USER audit_user     WITH PASSWORD '${AUDIT_DB_PASSWORD}';

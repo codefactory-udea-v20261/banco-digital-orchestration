@@ -30,6 +30,11 @@ spec:
       labels:
         app: zookeeper
     spec:
+      securityContext:
+        # Same reason as kafka.yaml: chown PVC to gid 1000 so cp-zookeeper
+        # can write to /var/lib/zookeeper/{data,log}. Without this the pod
+        # crashloops on the initial myid file write.
+        fsGroup: 1000
       containers:
         - name: zookeeper
           image: confluentinc/cp-zookeeper:7.5.0

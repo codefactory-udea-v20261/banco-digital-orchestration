@@ -18,7 +18,7 @@ spec:
       serviceAccountName: gateway
       containers:
         - name: gateway
-          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/gateway:latest
+          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/banco-digital-gateway:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
