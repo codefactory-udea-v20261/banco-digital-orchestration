@@ -18,7 +18,7 @@ spec:
       serviceAccountName: reporting
       containers:
         - name: reporting
-          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/banco-digital-reporting:latest
+          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/banco-digital-reporting:c2ecde8eb237a1e2d4896aa99ed895e8c997f062
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8083
@@ -29,6 +29,8 @@ spec:
             - configMapRef:
                 name: reporting-config
           env:
+            - name: PORT
+              value: "8083"
             - name: DB_USERNAME
               value: "reporting_user"
             - name: DB_PASSWORD
@@ -47,15 +49,17 @@ spec:
           readinessProbe:
             tcpSocket:
               port: 8083
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            failureThreshold: 6
+            initialDelaySeconds: 120
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 5
           livenessProbe:
             tcpSocket:
               port: 8083
             initialDelaySeconds: 120
-            periodSeconds: 20
+            periodSeconds: 30
             failureThreshold: 3
+            timeoutSeconds: 5
           resources:
             requests:
               cpu: "300m"

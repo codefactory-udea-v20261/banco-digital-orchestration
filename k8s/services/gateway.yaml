@@ -8,7 +8,7 @@ metadata:
 spec:
   # LoadBalancer is the only public ingress point.
   # If using GKE Ingress (k8s/ingress.yaml) instead, switch this to ClusterIP.
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: gateway
   ports:

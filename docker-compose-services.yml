@@ -67,10 +67,10 @@ services:
       dockerfile: Dockerfile
     container_name: banco-digital-api-gateway
     ports:
-      - "8000:8000"
+      - "8000:8080"
     environment:
       APP_PROFILE: docker
-      APP_PORT: 8000
+      APP_PORT: 8080
       SPRING_ZIPKIN_ENABLED: 'false'
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
       SPRING_DATA_REDIS_HOST: redis
@@ -84,10 +84,10 @@ services:
       dockerfile: Dockerfile
     container_name: banco-digital-identity
     ports:
-      - "8081:8081"
+      - "8081:8080"
     environment:
       APP_PROFILE: docker
-      APP_PORT: 8081
+      APP_PORT: 8080
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: banco_digital_identity
@@ -128,7 +128,7 @@ services:
       SPRING_ZIPKIN_ENABLED: 'false'
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      IDENTITY_SERVICE_URL: http://identity:8081
+      IDENTITY_SERVICE_URL: http://identity:8080
     depends_on:
       postgres:
         condition: service_healthy
@@ -141,10 +141,10 @@ services:
       dockerfile: Dockerfile
     container_name: banco-digital-audit
     ports:
-      - "8082:8082"
+      - "8082:8080"
     environment:
       APP_PROFILE: docker
-      APP_PORT: 8082
+      APP_PORT: 8080
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: banco_digital_audit
@@ -169,10 +169,10 @@ services:
       dockerfile: Dockerfile
     container_name: banco-digital-reporting
     ports:
-      - "8083:8083"
+      - "8083:8080"
     environment:
       APP_PROFILE: docker
-      APP_PORT: 8083
+      APP_PORT: 8080
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: banco_digital_reporting

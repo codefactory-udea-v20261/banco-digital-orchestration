@@ -6,7 +6,7 @@ metadata:
   labels:
     app: gateway
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: gateway
@@ -18,7 +18,7 @@ spec:
       serviceAccountName: gateway
       containers:
         - name: gateway
-          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/banco-digital-gateway:latest
+          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/banco-digital-gateway:91b8502ce41e2181df0e1cada7ac9b5605b53581
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
@@ -29,25 +29,31 @@ spec:
             - configMapRef:
                 name: gateway-config
           env:
+            - name: PORT
+              value: "8000"
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: jwt-secret
                   key: JWT_SECRET
+          # tcpSocket probes — the new gateway image returns non-2xx on
+          # /actuator/health/* for unauthenticated callers, so HTTP probes
+          # SIGTERM the pod after Spring Boot starts. Same workaround as
+          # identity / audit / reporting until the actuator is allowlisted.
           readinessProbe:
-            httpGet:
-              path: /actuator/health/readiness
+            tcpSocket:
               port: 8000
-            initialDelaySeconds: 20
-            periodSeconds: 10
-            failureThreshold: 6
-          livenessProbe:
-            httpGet:
-              path: /actuator/health/liveness
-              port: 8000
-            initialDelaySeconds: 45
-            periodSeconds: 20
+            initialDelaySeconds: 120
+            periodSeconds: 15
             failureThreshold: 3
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            failureThreshold: 3
+            timeoutSeconds: 5
           resources:
             requests:
               cpu: "300m"

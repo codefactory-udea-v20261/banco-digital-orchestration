@@ -18,7 +18,7 @@ spec:
       serviceAccountName: identity
       containers:
         - name: identity
-          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/banco-digital-identity:latest
+          image: us-central1-docker.pkg.dev/project-2183efe1-b87d-4c12-966/banco-digital-repo/banco-digital-identity:e8a3fa08da91a79437ff959587905ee3dd9ead5b
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
@@ -29,6 +29,8 @@ spec:
             - configMapRef:
                 name: identity-config
           env:
+            - name: PORT
+              value: "8081"
             - name: DB_USERNAME
               value: "identity_user"
             - name: DB_PASSWORD
@@ -49,15 +51,17 @@ spec:
           readinessProbe:
             tcpSocket:
               port: 8081
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            failureThreshold: 6
+            initialDelaySeconds: 120
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 5
           livenessProbe:
             tcpSocket:
               port: 8081
             initialDelaySeconds: 120
-            periodSeconds: 20
+            periodSeconds: 30
             failureThreshold: 3
+            timeoutSeconds: 5
           resources:
             requests:
               cpu: "500m"
