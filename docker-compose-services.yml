@@ -179,7 +179,7 @@ services:
       DB_USERNAME: postgres
       DB_PASSWORD: admin
 
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: kafka:9092
       MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 0.0
       SPRING_ZIPKIN_ENABLED: 'false'
@@ -203,6 +203,29 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  prometheus:
+    image: prom/prometheus
+    container_name: banco-digital-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - banco-digital-network
+
+  grafana:
+    image: grafana/grafana
+    container_name: banco-digital-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - prometheus
+    networks:
+      - banco-digital-network
 
 volumes:
   postgres_data:
