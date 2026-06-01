@@ -1,85 +1,187 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboards-config
+  name: grafana-dashboards
   namespace: banco-digital
   labels:
-    app: grafana
     component: monitoring
 data:
-  dashboards.yaml: |
+  dashboard-provider.yaml: |
     apiVersion: 1
     providers:
-      - name: banco-digital
+      - name: 'Banco Digital'
         orgId: 1
-        folder: Banco Digital
+        folder: 'Banco Digital'
         type: file
         disableDeletion: false
-        editable: true
+        updateIntervalSeconds: 10
+        allowUiUpdates: true
         options:
           path: /var/lib/grafana/dashboards
 
   banco-digital-overview.json: |
     {
-      "annotations": { "list": [] },
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": "-- Grafana --",
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
       "editable": true,
-      "fiscalYearStartMonth": 0,
+      "gnetId": null,
       "graphTooltip": 0,
       "id": null,
       "links": [],
       "panels": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-          "id": 1,
-          "targets": [
-            {
-              "expr": "sum(rate(http_server_requests_seconds_count{job=~\"banco-digital-.*\"}[5m])) by (job)",
-              "legendFormat": "{{job}}",
-              "refId": "A"
-            }
-          ],
-          "title": "HTTP requests / sec por microservicio",
-          "type": "timeseries"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
           "id": 2,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "pluginVersion": "8.0.0",
           "targets": [
             {
-              "expr": "sum(jvm_memory_used_bytes{job=~\"banco-digital-.*\", area=\"heap\"}) by (job)",
-              "legendFormat": "{{job}}",
+              "expr": "rate(http_requests_total[5m])",
               "refId": "A"
             }
           ],
-          "title": "JVM heap usado por microservicio",
+          "title": "Request Rate",
           "type": "timeseries"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
-          "id": 3,
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          },
+          "id": 4,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": {
+              "values": false,
+              "fields": "",
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "pluginVersion": "8.0.0",
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=~\"banco-digital-.*\"}[5m])) by (le, job))",
-              "legendFormat": "p95 {{job}}",
+              "expr": "jvm_memory_used_bytes",
               "refId": "A"
             }
           ],
-          "title": "Latencia HTTP p95",
-          "type": "timeseries"
+          "title": "JVM Memory Usage",
+          "type": "gauge"
         }
       ],
-      "refresh": "10s",
-      "schemaVersion": 39,
-      "tags": ["banco-digital"],
-      "templating": { "list": [] },
-      "time": { "from": "now-15m", "to": "now" },
+      "schemaVersion": 27,
+      "style": "dark",
+      "tags": [],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "",
       "title": "Banco Digital - Overview",
       "uid": "banco-digital-overview",
-      "version": 1
+      "version": 0
     }

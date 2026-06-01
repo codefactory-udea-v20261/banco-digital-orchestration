@@ -4,7 +4,6 @@ metadata:
   name: grafana
   namespace: banco-digital
   labels:
-    app: grafana
     component: monitoring
 spec:
   replicas: 1
@@ -19,10 +18,10 @@ spec:
     spec:
       containers:
         - name: grafana
-          image: grafana/grafana:10.4.0
+          image: grafana/grafana:latest
           ports:
-            - containerPort: 3000
-              name: http
+            - name: web
+              containerPort: 3000
           env:
             - name: GF_SECURITY_ADMIN_USER
               valueFrom:
@@ -34,53 +33,39 @@ spec:
                 secretKeyRef:
                   name: grafana-admin
                   key: admin-password
-            - name: GF_USERS_ALLOW_SIGN_UP
-              value: "false"
-            - name: GF_SERVER_ROOT_URL
-              value: "%(protocol)s://%(domain)s:%(http_port)s/"
-          volumeMounts:
-            - name: grafana-datasources
-              mountPath: /etc/grafana/provisioning/datasources
-            - name: grafana-dashboards-config
-              mountPath: /etc/grafana/provisioning/dashboards
-            - name: grafana-dashboards
-              mountPath: /var/lib/grafana/dashboards
-            - name: grafana-data
-              mountPath: /var/lib/grafana
+            - name: GF_INSTALL_PLUGINS
+              value: "grafana-piechart-panel"
           resources:
             requests:
               cpu: 100m
-              memory: 256Mi
+              memory: 128Mi
             limits:
               cpu: 500m
               memory: 512Mi
-          readinessProbe:
-            httpGet:
-              path: /api/health
-              port: 3000
-            initialDelaySeconds: 15
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /api/health
-              port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 30
+          volumeMounts:
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
+            - name: grafana-provisioning-datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: grafana-provisioning-dashboards
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: grafana-dashboards
+              mountPath: /var/lib/grafana/dashboards
       volumes:
-        - name: grafana-datasources
+        - name: grafana-storage
+          emptyDir: {}
+        - name: grafana-provisioning-datasources
           configMap:
             name: grafana-datasources
-        - name: grafana-dashboards-config
+        - name: grafana-provisioning-dashboards
           configMap:
-            name: grafana-dashboards-config
+            name: grafana-dashboards
             items:
-              - key: dashboards.yaml
-                path: dashboards.yaml
+              - key: dashboard-provider.yaml
+                path: dashboard-provider.yaml
         - name: grafana-dashboards
           configMap:
-            name: grafana-dashboards-config
+            name: grafana-dashboards
             items:
               - key: banco-digital-overview.json
                 path: banco-digital-overview.json
-        - name: grafana-data
-          emptyDir: {}

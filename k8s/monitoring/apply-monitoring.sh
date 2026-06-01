@@ -34,6 +34,11 @@ kubectl create secret generic grafana-admin \
   --from-literal=admin-password="$GRAFANA_ADMIN_PASSWORD" \
   --dry-run=client -o yaml | kubectl apply -f -
 
+step "Creating Prometheus ServiceAccount"
+kubectl create serviceaccount prometheus \
+  --namespace="$NAMESPACE" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
 step "Applying Prometheus manifests"
 kubectl apply -f "$MONITORING_DIR/prometheus-configmap.yaml"
 kubectl apply -f "$MONITORING_DIR/prometheus-deployment.yaml"

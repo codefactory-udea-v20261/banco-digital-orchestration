@@ -4,50 +4,37 @@ metadata:
   name: prometheus-config
   namespace: banco-digital
   labels:
-    app: prometheus
     component: monitoring
 data:
   prometheus.yml: |
     global:
       scrape_interval: 15s
       evaluation_interval: 15s
+      external_labels:
+        cluster: 'banco-digital'
 
     scrape_configs:
-      - job_name: prometheus
+      - job_name: 'banco-digital-gateway'
         static_configs:
-          - targets: ["localhost:9090"]
+          - targets: ['gateway:80']
+        metrics_path: '/actuator/prometheus'
 
-      - job_name: banco-digital-gateway
-        metrics_path: /actuator/prometheus
+      - job_name: 'banco-digital-identity'
         static_configs:
-          - targets: ["gateway:80"]
-            labels:
-              service: gateway
+          - targets: ['identity:8081']
+        metrics_path: '/actuator/prometheus'
 
-      - job_name: banco-digital-identity
-        metrics_path: /actuator/prometheus
+      - job_name: 'banco-digital-core'
         static_configs:
-          - targets: ["identity:8081"]
-            labels:
-              service: identity
+          - targets: ['core:8080']
+        metrics_path: '/actuator/prometheus'
 
-      - job_name: banco-digital-core
-        metrics_path: /actuator/prometheus
+      - job_name: 'banco-digital-audit'
         static_configs:
-          - targets: ["core:8080"]
-            labels:
-              service: core-banking
+          - targets: ['audit:8082']
+        metrics_path: '/actuator/prometheus'
 
-      - job_name: banco-digital-audit
-        metrics_path: /actuator/prometheus
+      - job_name: 'banco-digital-reporting'
         static_configs:
-          - targets: ["audit:8082"]
-            labels:
-              service: audit
-
-      - job_name: banco-digital-reporting
-        metrics_path: /actuator/prometheus
-        static_configs:
-          - targets: ["reporting:8083"]
-            labels:
-              service: reporting
+          - targets: ['reporting:8083']
+        metrics_path: '/actuator/prometheus'
